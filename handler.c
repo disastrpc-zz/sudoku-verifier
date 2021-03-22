@@ -62,15 +62,16 @@ struct matrix* read_into_matrix(char *p) {
 
 void* check_rows(void *p) {
 
-    int r, c;
     struct matrix *p_puzzle = malloc(sizeof(struct matrix));
     p_puzzle = (struct matrix *)p;
+    int r = p_puzzle->row;
+    int n[10];
 
-    for(r = 0; r < 9; r++) {
-        for(c = 0; c < 9; c++) {
-            printf("%c", p_puzzle->data[r][c]);
-        }
-    }    
+    for(int c = 0; c <= 9; c++) {
+        printf("%c", p_puzzle->data[r][c]);
+    }
+
+    printf("\n");    
 
     return NULL;
 }
@@ -83,9 +84,10 @@ void evaluate(struct matrix *p_puzzle, int t) {
     for(int i = 0; i < MAX_THREADS; i++) {
 
         if(i < 9) {
+            p_puzzle->row = i;
             int t = pthread_create(&threads[i], NULL, check_rows, (void *)p_puzzle);
         } else {
-            printf("%d leftover", i);
+            //printf("%d leftover", i);
         }
     }
 }
