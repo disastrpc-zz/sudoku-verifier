@@ -20,6 +20,19 @@ _MATRIX_BEGIN_
 _MATRIX_END_
 The result is stored in a matrix struct, which contains a 2D array and an int value that represents if the provided grid is valid.
 Function returns pointer to matrix struct. 
+
+ret[10]
+int = column/row/area number
+
+ret[11]
+0 = row
+1 = column
+2 = grid
+
+ret[12]
+0 = false
+1 = true
+for slice
 */
 
 Matrix *read_into_matrix(char *p) {
@@ -56,10 +69,10 @@ Matrix *read_into_matrix(char *p) {
     return p_puzzle;
 }
 
-void *is_valid(void *arg) {
+void *eval_slice(void *arg) {
 
     int s; 
-    int *ret = malloc(11*sizeof(int));
+    int *ret = malloc(13*sizeof(int));
     int *slice = (int *) arg;
 
     for(int i = 0; i < 9; i++) {
@@ -67,13 +80,20 @@ void *is_valid(void *arg) {
         ret[i] = (slice[i] - '0');
     }
 
+    ret[10] = slice[10];
+    ret[11] = slice[11];
+
     if(s == 45) {
-        ret[10] = 1;
+        ret[12] = 1;
         return (void *) ret;
     } else {
-        ret[10] = 0;
+        ret[12] = 0;
         return (void *) ret;
     }
+}
+
+void *eval_area(void *arg) {
+    return 0;
 }
 
 // takes matrix struct and task type for init() function.
@@ -85,38 +105,57 @@ void evaluate(Matrix *p_puzzle) {
 
     for(int i = 0; i <= MAX_THREADS; i++) {
 
-        slice = malloc(10 * sizeof(int));
+        slice = malloc(12 * sizeof(int));
 
         if(i < 9) {
 
             for(int s = 0; s < 9; s++) {
                 slice[s] = p_puzzle->data[i][s];
             }
-
-            int t = pthread_create(&tid[i], NULL, is_valid, (void *)slice);
-
-        } else if(i < 19 && i > 9) {
             
+            slice[10] = i + 1;
+            slice[11] = 0;
+
+            int t = pthread_create(&tid[i], NULL, eval_slice, (void *)slice);
+
+        } else if(i >= 9 && i < 19) {
+
             for(int s = 0; s < 9; s++) {
-                slice[s] = p_puzzle->data[s][i];
+                slice[s] = p_puzzle->data[s][i - 9];
             }
+
+            slice[10] = (i - 9) + 1;
+            slice[11] = 1;
+
+            int t = pthread_create(&tid[i], NULL, eval_slice, (void *)slice);
         }
     }
 
-    free(slice);
+    //free(slice);
 
-    for(int e = 0; e < 9; e++) {
+    for(int e = 0; e < 19; e++) {
 
         pthread_join(tid[e], &r);
         int *ret = (int *)r;
-        for(int x = 0; x < 9; x++) {
-            printf("%d", ret[x]);
+        char s_type[10];
+
+        // for(int x = 0; x < 12; x++) {
+        //     printf("%d", ret[x]);
+        // }
+        // printf("\n");
+
+        if(ret[11] == 0) {
+            strcpy(s_type, "row");
+        } else if(ret[11] == 1) {
+            strcpy(s_type, "column");
+        } else if(ret[11] == 2) {
+            strcpy(s_type, "area");
         }
-        printf("\n");
-        if(ret[10] == 1) {
-            printf("This solution is valid\n");
-        } else {
-            printf("This solution is not valid\n");
+
+        if(ret[12] == 1) {
+            printf("Solution for %s %d is valid\n", s_type, ret[10]);
+        } else if(ret[12] == 0) {
+            printf("Solution for %s %d is not valid\n", s_type, ret[10]);
         }
 
     }
