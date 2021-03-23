@@ -22,9 +22,9 @@ The result is stored in a matrix struct, which contains a 2D array and an int va
 Function returns pointer to matrix struct. 
 */
 
-struct matrix* read_into_matrix(char *p) {
+Matrix *read_into_matrix(char *p) {
     
-    struct matrix *p_puzzle = malloc(sizeof(struct matrix));
+    Matrix *p_puzzle = malloc(sizeof(Matrix));
     char d[1024];
     int r = 0, c = 0;
     FILE *array_f;
@@ -43,51 +43,82 @@ struct matrix* read_into_matrix(char *p) {
         d[strlen(d) - 1] = '\0';
         if(strcmp(d, "_MATRIX_BEGIN_") == 0 || strcmp(d, "_MATRIX_END_") == 0) {/*Pass*/} 
         else {
+
             // Loops through each column in the row and adds it to the 2D array
             for(c = 0; c < 9; c++) {
                 p_puzzle->data[r][c] = d[c];
-                //printf("[r:%d][c:%d]", r, c);
-                //printf("%c  ", (int)ptr_puzzle->data[r][c]);
-            }
-
+            } 
+            
             r++;
         }
-        //printf("\n");
     }
 
-    //int res = (ptr_puzzle->data[0][0] - '0') + (ptr_puzzle->data[0][2] - '0');
-    //printf("%d", res);
     return p_puzzle;
 }
 
-void* check_rows(void *p) {
+void *is_valid(void *arg) {
 
-    struct matrix *p_puzzle = malloc(sizeof(struct matrix));
-    p_puzzle = (struct matrix *)p;
-    int r = p_puzzle->row;
-    int n[10];
+    int s; 
+    int *ret = malloc(11*sizeof(int));
+    int *slice = (int *) arg;
 
-    for(int c = 0; c <= 9; c++) {
-        printf("%c", p_puzzle->data[r][c]);
+    for(int i = 0; i < 9; i++) {
+        s += (slice[i] - '0');
+        ret[i] = (slice[i] - '0');
     }
 
-    printf("\n");    
-
-    return NULL;
+    if(s == 45) {
+        ret[10] = 1;
+        return (void *) ret;
+    } else {
+        ret[10] = 0;
+        return (void *) ret;
+    }
 }
 
 // takes matrix struct and task type for init() function.
-void evaluate(struct matrix *p_puzzle, int t) {
+void evaluate(Matrix *p_puzzle) {
 
-    pthread_t threads[MAX_THREADS];
+    void *r;
+    pthread_t tid[MAX_THREADS];
+    int *slice;
 
-    for(int i = 0; i < MAX_THREADS; i++) {
+    for(int i = 0; i <= MAX_THREADS; i++) {
+
+        slice = malloc(10 * sizeof(int));
 
         if(i < 9) {
-            p_puzzle->row = i;
-            int t = pthread_create(&threads[i], NULL, check_rows, (void *)p_puzzle);
-        } else {
-            //printf("%d leftover", i);
+
+            for(int s = 0; s < 9; s++) {
+                slice[s] = p_puzzle->data[i][s];
+            }
+
+            int t = pthread_create(&tid[i], NULL, is_valid, (void *)slice);
+
+        } else if(i < 19 && i > 9) {
+            
+            for(int s = 0; s < 9; s++) {
+                slice[s] = p_puzzle->data[s][i];
+            }
         }
     }
+
+    free(slice);
+
+    for(int e = 0; e < 9; e++) {
+
+        pthread_join(tid[e], &r);
+        int *ret = (int *)r;
+        for(int x = 0; x < 9; x++) {
+            printf("%d", ret[x]);
+        }
+        printf("\n");
+        if(ret[10] == 1) {
+            printf("This solution is valid\n");
+        } else {
+            printf("This solution is not valid\n");
+        }
+
+    }
+
 }
